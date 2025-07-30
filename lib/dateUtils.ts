@@ -16,6 +16,8 @@ export type CustomStartDate = {
   monthIndex: number;    // 0-based month index
   yearNumber: number;    // Starting custom year
 };
+const mod = (n: number, m: number) => ((n % m) + m) % m;
+
 
 export type CustomDateSystem = {
   name: string;
@@ -30,6 +32,7 @@ export type CustomDateSystem = {
 };
 
 export type CustomDate = {
+    dayName:string;
   day: number;
   month: string;
   year: number;
@@ -63,7 +66,7 @@ export function toCustomDate(
   gregorianDate: Date,
   system: CustomDateSystem
 ): CustomDate {
-  const { gregorianAnchor, yearSize, months, seasons, startDate } = system;
+  const { gregorianAnchor, yearSize, months, seasons, startDate, daysOfWeek } = system;
 
   // 1. Days difference from Gregorian anchor
   const daysDiff = Math.floor(
@@ -104,7 +107,7 @@ export function toCustomDate(
   const day = dayOfYear + 1;
   const month = months[monthIndex].name;
 
-  // 6. Determine season (if any)
+  // 6. Determine season
   const season =
     seasons.find(
       (s) =>
@@ -115,14 +118,21 @@ export function toCustomDate(
           (monthIndex >= s.startMonthIndex || monthIndex <= s.endMonthIndex))
     )?.name || "";
 
-  return { day, month, year, season };
+  // 7. Determine custom day name
+const totalDaysSinceAnchor = startOffset + daysDiff;
+const weekdayIndex = mod((startDate.dayIndex || 0) + totalDaysSinceAnchor, daysOfWeek.length);
+const dayName = daysOfWeek[weekdayIndex] || "";
+
+
+  return { day, month, year, season, dayName };
 }
+
 
 /**
  * Format as: "Day Month Year (Season)"
  */
 export function formatCustomDate(date: CustomDate): string {
-  return `${date.day} ${date.month} ${date.year}${
+  return `${date.dayName} ${date.day} ${date.month} ${date.year}${
     date.season ? ` (${date.season})` : ""
   }`;
 }
