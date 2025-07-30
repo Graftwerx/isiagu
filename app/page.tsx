@@ -10,6 +10,7 @@ import {
   toCustomDate,
   formatCustomDate,
 } from "@/lib/dateUtils";
+import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "custom_date_systems";
 
@@ -99,7 +100,7 @@ export default function IndexPage() {
 
   return (
     <main className="min-h-screen bg-neutral-900 text-white flex flex-col items-center py-10 space-y-8 w-full px-4">
-      <h1 className="text-3xl font-bold">🌌 Custom Calendar Manager</h1>
+      <h1 className="text-3xl font-bold"> Custom Calendar Manager</h1>
 
       {/* Dropdown + Actions */}
       {systems.length > 0 && (
@@ -122,16 +123,16 @@ export default function IndexPage() {
             ))}
           </select>
 
-          <button
-            className="px-4 py-2 bg-green-600 rounded hover:bg-green-500"
+          <Button
+            className="px-4 py-2 hover:bg-green-400"
             onClick={() => router.push("/post-custom")}
           >
             + New Calendar
-          </button>
+          </Button>
           {selectedSystem && (
             <>
-              <button
-                className="px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-500"
+              <Button
+                className="px-4 py-2 hover:bg-amber-400"
                 onClick={() =>
                   router.push(
                     `/edit-custom?name=${encodeURIComponent(
@@ -141,13 +142,13 @@ export default function IndexPage() {
                 }
               >
                 ✏️ Edit
-              </button>
-              <button
-                className="px-4 py-2 bg-red-600 rounded hover:bg-red-500"
+              </Button>
+              <Button
+                className="px-4 py-2 hover:bg-red-400"
                 onClick={deleteSelected}
               >
                 🗑 Delete
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -155,12 +156,12 @@ export default function IndexPage() {
 
       {/* First Calendar Button */}
       {systems.length === 0 && (
-        <button
+        <Button
           onClick={() => router.push("/post-custom")}
-          className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500"
+          className="px-4 py-2 hover:bg-gray-700"
         >
           Create First Calendar
-        </button>
+        </Button>
       )}
 
       {/* Display Current Date */}
@@ -169,23 +170,26 @@ export default function IndexPage() {
       {/* Birthday Conversion */}
       {selectedSystem && (
         <div className="mt-6 text-center space-y-2">
-          <p className="text-lg">🎂 Please input your birthday (Gregorian):</p>
+          <p className="text-lg">
+            Please input a memorable date for conversion:
+          </p>
           <input
             type="date"
             className="p-2 bg-neutral-800 text-white rounded"
             value={birthdayInput}
             onChange={(e) => setBirthdayInput(e.target.value)}
           />
-          <button
-            className="ml-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500"
+          <Button
+            className="ml-2 px-4 py-2 hover:bg-green-500"
             onClick={handleBirthdayConvert}
+            variant={"secondary"}
           >
             Convert
-          </button>
+          </Button>
 
           {customBirthday && (
             <p className="mt-2 text-xl font-semibold">
-              Your custom birthday: {customBirthday}
+              Your converted date is: {customBirthday}
             </p>
           )}
         </div>

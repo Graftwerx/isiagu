@@ -164,9 +164,10 @@ export default function CustomDateForm({
         </div>
 
         {/* Year, Months, Week */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 space-y-2 gap-4">
           <div>
-            <Label>Year Size (days)</Label>
+            {" "}
+            <Label>Year Size (days)</Label>{" "}
             <Input
               type="number"
               value={yearSize}
@@ -175,10 +176,9 @@ export default function CustomDateForm({
                 setYearSize(val);
                 distributeMonths(val, monthCount);
               }}
-              className="bg-neutral-700 border-neutral-600 text-white"
+              className="bg-neutral-700 border-neutral-600 text-white mt-2"
             />
           </div>
-
           <div>
             <Label>Number of Months</Label>
             <Input
@@ -189,10 +189,9 @@ export default function CustomDateForm({
                 setMonthCount(val);
                 distributeMonths(yearSize, val);
               }}
-              className="bg-neutral-700 border-neutral-600 text-white"
+              className="bg-neutral-700 border-neutral-600 text-white mt-2"
             />
           </div>
-
           <div>
             <Label>Week Size (days)</Label>
             <Input
@@ -208,7 +207,7 @@ export default function CustomDateForm({
                 );
                 distributeMonths(yearSize, monthCount);
               }}
-              className="bg-neutral-700 border-neutral-600 text-white"
+              className="bg-neutral-700 border-neutral-600 text-white mt-2"
             />
           </div>
         </div>
@@ -318,7 +317,7 @@ export default function CustomDateForm({
             type="date"
             value={gregorianAnchor}
             onChange={(e) => setGregorianAnchor(e.target.value)}
-            className="bg-neutral-700 border-neutral-600 text-white"
+            className="bg-neutral-700 border-neutral-600 text-white mt-2"
           />
         </div>
 
