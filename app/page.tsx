@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import CustomDateForm from "@/components/CustomDateForm";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
 import CustomDateDisplay from "@/components/CustomDateDisplay";
 import {
   CustomDateSystem,
@@ -12,23 +14,28 @@ import {
 const STORAGE_KEY = "custom_date_systems";
 
 export default function IndexPage() {
+  const router = useRouter();
+
   const [systems, setSystems] = useState<CustomDateSystem[]>([]);
   const [selectedSystem, setSelectedSystem] = useState<CustomDateSystem | null>(
     null
   );
-  const [showForm, setShowForm] = useState(false);
 
-  // Birthday state
   const [birthdayInput, setBirthdayInput] = useState("");
   const [customBirthday, setCustomBirthday] = useState<string | null>(null);
 
-  // --- Load from LocalStorage on mount ---
+  // --- Load saved systems & check for creation toast ---
   useEffect(() => {
+    // Toast if redirected from /post-custom
+    if (localStorage.getItem("calendarCreated") === "1") {
+      toast.success("Custom calendar created successfully 🎉");
+      localStorage.removeItem("calendarCreated");
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
         const parsed: Partial<CustomDateSystem>[] = JSON.parse(raw);
-
         const restored: CustomDateSystem[] = parsed.map((s) => ({
           name: s.name || "Unnamed",
           yearSize: s.yearSize || 365,
@@ -56,29 +63,14 @@ export default function IndexPage() {
     }
   }, []);
 
-  // --- Save system to localStorage ---
-  const saveSystem = (system: CustomDateSystem) => {
-    const updated = [...systems, system];
-    setSystems(updated);
-    setSelectedSystem(system);
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(
-        updated.map((s) => ({
-          ...s,
-          gregorianAnchor: s.gregorianAnchor.toISOString(),
-        }))
-      )
-    );
-    setShowForm(false);
-  };
-
-  // --- Delete selected system ---
+  // --- Delete selected calendar ---
   const deleteSelected = () => {
     if (!selectedSystem) return;
+
     const updated = systems.filter((s) => s.name !== selectedSystem.name);
     setSystems(updated);
     setSelectedSystem(updated.length > 0 ? updated[0] : null);
+
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(
@@ -88,23 +80,30 @@ export default function IndexPage() {
         }))
       )
     );
+
+    toast.error(`Calendar "${selectedSystem.name}" deleted 🗑`);
   };
 
-  // --- Handle Birthday Conversion ---
+  // --- Handle birthday conversion ---
   const handleBirthdayConvert = () => {
     if (!selectedSystem || !birthdayInput) return;
     const gregorian = new Date(birthdayInput);
     const customDate = toCustomDate(gregorian, selectedSystem);
     setCustomBirthday(formatCustomDate(customDate));
+    toast(
+      `Your birthday in "${selectedSystem.name}" is ${formatCustomDate(
+        customDate
+      )}`
+    );
   };
 
   return (
-    <main className="min-h-screen bg-neutral-900 text-white flex flex-col items-center py-10 space-y-8 w-full">
+    <main className="min-h-screen bg-neutral-900 text-white flex flex-col items-center py-10 space-y-8 w-full px-4">
       <h1 className="text-3xl font-bold">🌌 Custom Calendar Manager</h1>
 
-      {/* Dropdown for existing systems */}
+      {/* Dropdown + Actions */}
       {systems.length > 0 && (
-        <div className="flex space-x-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center justify-center">
           <select
             className="p-2 bg-neutral-800 text-white rounded"
             value={selectedSystem?.name || ""}
@@ -112,7 +111,7 @@ export default function IndexPage() {
               const found = systems.find((s) => s.name === e.target.value);
               if (found) {
                 setSelectedSystem(found);
-                setCustomBirthday(null); // reset birthday display
+                setCustomBirthday(null); // reset birthday output
               }
             }}
           >
@@ -125,63 +124,71 @@ export default function IndexPage() {
 
           <button
             className="px-4 py-2 bg-green-600 rounded hover:bg-green-500"
-            onClick={() => setShowForm(true)}
+            onClick={() => router.push("/post-custom")}
           >
             + New Calendar
           </button>
-
           {selectedSystem && (
-            <button
-              className="px-4 py-2 bg-red-600 rounded hover:bg-red-500"
-              onClick={deleteSelected}
-            >
-              🗑 Delete
-            </button>
+            <>
+              <button
+                className="px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-500"
+                onClick={() =>
+                  router.push(
+                    `/edit-custom?name=${encodeURIComponent(
+                      selectedSystem.name
+                    )}`
+                  )
+                }
+              >
+                ✏️ Edit
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 rounded hover:bg-red-500"
+                onClick={deleteSelected}
+              >
+                🗑 Delete
+              </button>
+            </>
           )}
         </div>
       )}
 
-      {/* Show create button if no systems exist */}
-      {systems.length === 0 && !showForm && (
+      {/* First Calendar Button */}
+      {systems.length === 0 && (
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => router.push("/post-custom")}
           className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500"
         >
           Create First Calendar
         </button>
       )}
 
-      {/* Form for creating a new system */}
-      {showForm && <CustomDateForm onSubmit={saveSystem} />}
+      {/* Display Current Date */}
+      {selectedSystem && <CustomDateDisplay system={selectedSystem} />}
 
-      {/* Display selected system */}
-      {selectedSystem && !showForm && (
-        <>
-          <CustomDateDisplay system={selectedSystem} />
+      {/* Birthday Conversion */}
+      {selectedSystem && (
+        <div className="mt-6 text-center space-y-2">
+          <p className="text-lg">🎂 Please input your birthday (Gregorian):</p>
+          <input
+            type="date"
+            className="p-2 bg-neutral-800 text-white rounded"
+            value={birthdayInput}
+            onChange={(e) => setBirthdayInput(e.target.value)}
+          />
+          <button
+            className="ml-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500"
+            onClick={handleBirthdayConvert}
+          >
+            Convert
+          </button>
 
-          {/* Birthday Conversion */}
-          <div className="mt-6 text-center space-y-2">
-            <p className="text-lg">🎂 Please input your birthday:</p>
-            <input
-              type="date"
-              className="p-2 bg-neutral-800 text-white rounded"
-              value={birthdayInput}
-              onChange={(e) => setBirthdayInput(e.target.value)}
-            />
-            <button
-              className="ml-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-500"
-              onClick={handleBirthdayConvert}
-            >
-              Convert
-            </button>
-
-            {customBirthday && (
-              <p className="mt-2 text-xl font-semibold">
-                Your custom birthday: {customBirthday}
-              </p>
-            )}
-          </div>
-        </>
+          {customBirthday && (
+            <p className="mt-2 text-xl font-semibold">
+              Your custom birthday: {customBirthday}
+            </p>
+          )}
+        </div>
       )}
     </main>
   );

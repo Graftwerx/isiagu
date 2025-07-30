@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import {
   CustomDateSystem,
   CustomSeason,
@@ -6,15 +8,57 @@ import {
   generateMonths,
 } from "@/lib/dateUtils";
 
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 interface CustomDateFormProps {
   onSubmit: (system: CustomDateSystem) => void;
+  initialSystem?: CustomDateSystem; // optional
 }
 
-const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
-  const [showForm, setShowForm] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+export default function CustomDateForm({
+  onSubmit,
+  initialSystem,
+}: CustomDateFormProps) {
+  useEffect(() => {
+    if (initialSystem) {
+      setName(initialSystem.name);
+      setYearSize(initialSystem.yearSize);
+      setMonthCount(initialSystem.monthCount);
+      setWeekSize(initialSystem.weekSize);
+      setGregorianAnchor(
+        initialSystem.gregorianAnchor.toISOString().split("T")[0]
+      );
+      setMonths(initialSystem.months);
+      setDaysOfWeek(initialSystem.daysOfWeek);
+      setSeasons(initialSystem.seasons);
+      setStartDayOfWeek(initialSystem.startDate.dayIndex);
+      setStartDayOfMonth(initialSystem.startDate.dayOfMonth);
+      setStartMonthIndex(initialSystem.startDate.monthIndex);
+      setStartYearNumber(initialSystem.startDate.yearNumber);
+    }
+  }, [initialSystem]);
 
-  // Core Inputs
   const [name, setName] = useState("");
   const [yearSize, setYearSize] = useState(365);
   const [monthCount, setMonthCount] = useState(12);
@@ -23,7 +67,6 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
     new Date().toISOString().split("T")[0]
   );
 
-  // Generated & Editable
   const [months, setMonths] = useState<CustomMonth[]>([]);
   const [daysOfWeek, setDaysOfWeek] = useState<string[]>(
     Array(7)
@@ -32,13 +75,12 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
   );
   const [seasons, setSeasons] = useState<CustomSeason[]>([]);
 
-  // Custom Start Date
   const [startDayOfWeek, setStartDayOfWeek] = useState(0);
   const [startDayOfMonth, setStartDayOfMonth] = useState(1);
   const [startMonthIndex, setStartMonthIndex] = useState(0);
   const [startYearNumber, setStartYearNumber] = useState(1);
 
-  // --- Generate months evenly ---
+  // Generate months evenly
   const distributeMonths = (year = yearSize, monthsCount = monthCount) => {
     const generated = generateMonths(year, monthsCount, weekSize);
     const preservedNames = generated.map((m, i) => ({
@@ -48,7 +90,7 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
     setMonths(preservedNames);
   };
 
-  // --- Add a new season ---
+  // --- Seasons ---
   const addSeason = () => {
     setSeasons([
       ...seasons,
@@ -60,7 +102,6 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
     ]);
   };
 
-  // --- Update season fields ---
   const updateSeason = (
     index: number,
     field: "name" | "startMonthIndex" | "endMonthIndex",
@@ -68,25 +109,20 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
   ) => {
     setSeasons((prev) => {
       const updated = [...prev];
-
-      if (field === "name") {
-        updated[index].name = value;
-      } else {
-        updated[index][field] = parseInt(value) || 0;
-      }
-
+      if (field === "name") updated[index].name = value;
+      else updated[index][field] = parseInt(value) || 0;
       return updated;
     });
   };
 
-  // --- Validate form before confirming ---
-  const validateForm = () => {
-    if (yearSize <= 0 || monthCount <= 0 || weekSize <= 0) return false;
-    if (monthCount >= yearSize || monthCount <= weekSize) return false;
-    return true;
-  };
+  // Validation
+  const validateForm = () =>
+    yearSize > 0 &&
+    monthCount > 0 &&
+    weekSize > 0 &&
+    monthCount < yearSize &&
+    monthCount > weekSize;
 
-  // --- Handle Save ---
   const handleSave = () => {
     const system: CustomDateSystem = {
       name,
@@ -106,73 +142,61 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
     };
 
     onSubmit(system);
-    setShowForm(false);
-    setShowConfirm(false);
+
+    toast.success(`Custom calendar "${name}" created 🎉`);
   };
 
   return (
-    <div className="p-4 border rounded-lg bg-neutral-800 text-white">
-      {!showForm && (
-        <button
-          type="button"
-          onClick={() => {
-            setShowForm(true);
-            distributeMonths();
-          }}
-          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500"
-        >
-          Create Custom Calendar
-        </button>
-      )}
-
-      {showForm && !showConfirm && (
-        <div className="space-y-4 mt-4">
-          <h2 className="text-xl font-bold">Custom Calendar Setup</h2>
-
-          {/* Calendar Name */}
-          <input
-            className="border p-2 w-full bg-neutral-700 text-white"
-            placeholder="Calendar Name"
+    <Card className="bg-neutral-800 text-white border-neutral-700 w-full max-w-3xl">
+      <CardHeader>
+        <CardTitle>Create Custom Calendar</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Calendar Name */}
+        <div className="space-y-1">
+          <Label>Calendar Name</Label>
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
+            className="bg-neutral-700 border-neutral-600 text-white"
+            placeholder="My Fantasy Calendar"
           />
+        </div>
 
-          {/* Year Size */}
+        {/* Year, Months, Week */}
+        <div className="grid grid-cols-3 gap-4">
           <div>
-            <label>Year Size (days)</label>
-            <input
+            <Label>Year Size (days)</Label>
+            <Input
               type="number"
-              className="border p-2 w-full bg-neutral-700 text-white"
               value={yearSize}
               onChange={(e) => {
                 const val = parseInt(e.target.value) || 0;
                 setYearSize(val);
                 distributeMonths(val, monthCount);
               }}
+              className="bg-neutral-700 border-neutral-600 text-white"
             />
           </div>
 
-          {/* Month Count */}
           <div>
-            <label>Number of Months</label>
-            <input
+            <Label>Number of Months</Label>
+            <Input
               type="number"
-              className="border p-2 w-full bg-neutral-700 text-white"
               value={monthCount}
               onChange={(e) => {
                 const val = parseInt(e.target.value) || 0;
                 setMonthCount(val);
                 distributeMonths(yearSize, val);
               }}
+              className="bg-neutral-700 border-neutral-600 text-white"
             />
           </div>
 
-          {/* Week Size */}
           <div>
-            <label>Days in a Week</label>
-            <input
+            <Label>Week Size (days)</Label>
+            <Input
               type="number"
-              className="border p-2 w-full bg-neutral-700 text-white"
               value={weekSize}
               onChange={(e) => {
                 const val = parseInt(e.target.value) || 0;
@@ -184,18 +208,18 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
                 );
                 distributeMonths(yearSize, monthCount);
               }}
+              className="bg-neutral-700 border-neutral-600 text-white"
             />
           </div>
+        </div>
 
-          {/* Name Days of the Week */}
-          <div>
-            <label className="block font-bold mb-1">
-              Name Days of the Week
-            </label>
+        {/* Name Days of the Week */}
+        <div>
+          <Label>Name Days of the Week</Label>
+          <div className="grid grid-cols-2 gap-2 mt-2">
             {daysOfWeek.map((d, i) => (
-              <input
+              <Input
                 key={i}
-                className="border p-2 w-full mb-1 bg-neutral-700 text-white"
                 value={d}
                 onChange={(e) =>
                   setDaysOfWeek((prev) => {
@@ -204,186 +228,187 @@ const CustomDateForm: React.FC<CustomDateFormProps> = ({ onSubmit }) => {
                     return updated;
                   })
                 }
+                className="bg-neutral-700 border-neutral-600 text-white"
               />
             ))}
           </div>
+        </div>
 
-          {/* Name Months */}
+        {/* Name Months */}
+        {months.length > 0 && (
           <div>
-            <label className="block font-bold mb-1">Name Months</label>
-            {months.map((m, i) => (
-              <input
-                key={i}
-                className="border p-2 w-full mb-1 bg-neutral-700 text-white"
-                value={m.name}
-                onChange={(e) =>
-                  setMonths((prev) => {
-                    const updated = [...prev];
-                    updated[i] = { ...updated[i], name: e.target.value };
-                    return updated;
-                  })
-                }
-              />
-            ))}
-          </div>
-
-          {/* Custom Start Date */}
-          <div>
-            <label className="block font-bold mb-1">Custom Start Date</label>
-            <div className="flex space-x-2">
-              <select
-                className="border p-2 bg-neutral-700 text-white"
-                value={startDayOfWeek}
-                onChange={(e) => setStartDayOfWeek(parseInt(e.target.value))}
-              >
-                {daysOfWeek.map((d, i) => (
-                  <option key={i} value={i}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="border p-2 bg-neutral-700 text-white"
-                value={startMonthIndex}
-                onChange={(e) => setStartMonthIndex(parseInt(e.target.value))}
-              >
-                {months.map((m, i) => (
-                  <option key={i} value={i}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                className="border p-2 w-20 bg-neutral-700 text-white"
-                min={1}
-                max={months[startMonthIndex]?.days || 1}
-                value={startDayOfMonth}
-                onChange={(e) => setStartDayOfMonth(parseInt(e.target.value))}
-              />
-              <input
-                type="number"
-                className="border p-2 w-20 bg-neutral-700 text-white"
-                value={startYearNumber}
-                onChange={(e) => setStartYearNumber(parseInt(e.target.value))}
-              />
+            <Label>Name Months</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {months.map((m, i) => (
+                <Input
+                  key={i}
+                  value={m.name}
+                  onChange={(e) =>
+                    setMonths((prev) => {
+                      const updated = [...prev];
+                      updated[i] = { ...updated[i], name: e.target.value };
+                      return updated;
+                    })
+                  }
+                  className="bg-neutral-700 border-neutral-600 text-white"
+                />
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Gregorian Anchor */}
-          <div>
-            <label>Gregorian Start Date (Anchor)</label>
-            <input
-              type="date"
-              className="border p-2 w-full bg-neutral-700 text-white"
-              value={gregorianAnchor}
-              onChange={(e) => setGregorianAnchor(e.target.value)}
+        {/* Custom Start Date */}
+        <div className="space-y-2">
+          <Label>Custom Start Date</Label>
+          <div className="flex space-x-2">
+            <Select
+              value={startDayOfWeek.toString()}
+              onValueChange={(v) => setStartDayOfWeek(parseInt(v))}
+            >
+              <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {daysOfWeek.map((d, i) => (
+                  <SelectItem key={i} value={i.toString()}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={startMonthIndex.toString()}
+              onValueChange={(v) => setStartMonthIndex(parseInt(v))}
+            >
+              <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((m, i) => (
+                  <SelectItem key={i} value={i.toString()}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="number"
+              min={1}
+              max={months[startMonthIndex]?.days || 1}
+              value={startDayOfMonth}
+              onChange={(e) => setStartDayOfMonth(parseInt(e.target.value))}
+              className="bg-neutral-700 border-neutral-600 text-white w-20"
+            />
+
+            <Input
+              type="number"
+              value={startYearNumber}
+              onChange={(e) => setStartYearNumber(parseInt(e.target.value))}
+              className="bg-neutral-700 border-neutral-600 text-white w-20"
             />
           </div>
+        </div>
 
-          {/* Overview */}
-          {months.length > 0 && (
-            <div className="mt-4 p-2 border rounded bg-neutral-700">
-              <h3 className="font-bold mb-2">Overview (Auto Weeks)</h3>
-              <ul className="list-disc pl-6">
-                {months.map((m, i) => (
-                  <li key={i}>
-                    {m.name}: {m.days} days (~{m.weeks} weeks)
-                  </li>
-                ))}
-              </ul>
+        {/* Gregorian Anchor */}
+        <div>
+          <Label>Gregorian Anchor</Label>
+          <Input
+            type="date"
+            value={gregorianAnchor}
+            onChange={(e) => setGregorianAnchor(e.target.value)}
+            className="bg-neutral-700 border-neutral-600 text-white"
+          />
+        </div>
+
+        {/* --- Seasons Section --- */}
+        <div>
+          <Label>Seasons</Label>
+          {seasons.map((s, i) => (
+            <div key={i} className="flex space-x-2 mt-2">
+              <Input
+                value={s.name}
+                onChange={(e) => updateSeason(i, "name", e.target.value)}
+                className="bg-neutral-700 border-neutral-600 text-white flex-1"
+              />
+              <Select
+                value={s.startMonthIndex.toString()}
+                onValueChange={(v) => updateSeason(i, "startMonthIndex", v)}
+              >
+                <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((m, idx) => (
+                    <SelectItem key={idx} value={idx.toString()}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={s.endMonthIndex.toString()}
+                onValueChange={(v) => updateSeason(i, "endMonthIndex", v)}
+              >
+                <SelectTrigger className="bg-neutral-700 border-neutral-600 text-white w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((m, idx) => (
+                    <SelectItem key={idx} value={idx.toString()}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+          ))}
 
-          {/* Seasons */}
-          <div className="mt-4">
-            <h3 className="font-bold mb-2">Seasons</h3>
-            {seasons.map((s, i) => (
-              <div key={i} className="flex space-x-2 mb-2">
-                <input
-                  className="border p-2 flex-1 bg-neutral-700 text-white"
-                  value={s.name}
-                  onChange={(e) => updateSeason(i, "name", e.target.value)}
-                />
-                <select
-                  className="border p-2 bg-neutral-700 text-white"
-                  value={s.startMonthIndex}
-                  onChange={(e) =>
-                    updateSeason(i, "startMonthIndex", e.target.value)
-                  }
-                >
-                  {months.map((m, idx) => (
-                    <option key={idx} value={idx}>
-                      Start: {m.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="border p-2 bg-neutral-700 text-white"
-                  value={s.endMonthIndex}
-                  onChange={(e) =>
-                    updateSeason(i, "endMonthIndex", e.target.value)
-                  }
-                >
-                  {months.map((m, idx) => (
-                    <option key={idx} value={idx}>
-                      End: {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addSeason}
-              className="mt-2 px-3 py-1 bg-green-600 rounded hover:bg-green-500"
-            >
-              Add Season
-            </button>
-          </div>
-
-          {/* Confirm Button */}
-          <button
+          <Button
             type="button"
-            disabled={!validateForm()}
-            onClick={() => setShowConfirm(true)}
-            className="px-4 py-2 bg-yellow-600 text-white rounded w-full mt-4 hover:bg-yellow-500"
+            className="mt-2 bg-green-600 hover:bg-green-500"
+            onClick={addSeason}
           >
-            Review & Confirm
-          </button>
+            + Add Season
+          </Button>
         </div>
-      )}
 
-      {showConfirm && (
-        <div className="mt-4 p-4 border border-yellow-500 rounded bg-neutral-700">
-          <h3 className="font-bold mb-2 text-yellow-400">Confirm Creation</h3>
-          <p className="mb-4">
-            You are about to create the custom calendar: <b>{name}</b>. <br />
-            Year Size: {yearSize} days, Months: {monthCount}, Week Size:{" "}
-            {weekSize}.
-            <br />
-            Are you sure?
-          </p>
-          <div className="flex space-x-2">
-            <button
+        {/* Confirmation */}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
               type="button"
-              onClick={handleSave}
-              className="px-4 py-2 bg-green-600 rounded hover:bg-green-500"
+              disabled={!validateForm()}
+              className="w-full bg-yellow-600 hover:bg-yellow-500"
             >
-              Yes, Create
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowConfirm(false)}
-              className="px-4 py-2 bg-red-600 rounded hover:bg-red-500"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+              Review & Confirm
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="bg-neutral-800 text-white border border-yellow-500">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Confirm creation of calendar {name}?
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+            <p>
+              Year Size: {yearSize} days, Months: {monthCount}, Week Size:{" "}
+              {weekSize}
+            </p>
+            <AlertDialogFooter className="mt-4">
+              <AlertDialogCancel className="bg-red-600 text-white hover:bg-red-500">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-green-600 text-white hover:bg-green-500"
+                onClick={handleSave}
+              >
+                Yes, Create
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardContent>
+    </Card>
   );
-};
-
-export default CustomDateForm;
+}
